@@ -44,11 +44,17 @@ MPPoseTrackingDetector::InitPoseTrackingDetector(const char *pose_landmark_model
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller landmarks_poller,
                    graph.AddOutputStreamPoller(kOutputStream_landmarks));
 
+/*  ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller world_landmarks_poller,
+                   graph.AddOutputStreamPoller(kOutputStream_world_landmarks));*/
+
   ASSIGN_OR_RETURN(mediapipe::OutputStreamPoller pose_detected_poller,
                    graph.AddOutputStreamPoller(kOutputStream_pose_detected));
 
   landmarks_poller_ptr = std::make_unique<mediapipe::OutputStreamPoller>(
       std::move(landmarks_poller));
+
+/*  world_landmarks_poller_ptr = std::make_unique<mediapipe::OutputStreamPoller>(
+      std::move(world_landmarks_poller));*/
 
   pose_detected_poller_ptr = std::make_unique<mediapipe::OutputStreamPoller>(
       std::move(pose_detected_poller));
@@ -105,6 +111,11 @@ MPPoseTrackingDetector::DetectPosesWithStatus(const cv::Mat &camera_frame, bool 
     return absl::CancelledError("Failed during getting next landmarks_packet.");
   }
 
+/*  if (!world_landmarks_poller_ptr ||
+      !world_landmarks_poller_ptr->Next(&pose_world_landmarks_packet)) {
+    return absl::CancelledError("Failed during getting next world_landmarks_packet.");
+  }*/
+
   *isPose = true;
   pose_detected = true;
 
@@ -147,8 +158,8 @@ absl::Status MPPoseTrackingDetector::DetectLandmarksWithStatus(
 absl::Status MPPoseTrackingDetector::DetectLandmarksWithStatus(
     Point3DWithVisibility *poses_landmarks) {
 
-  if (pose_landmarks_packet.IsEmpty()) {
-    return absl::CancelledError("Pose landmarks packet is empty.");
+  if (pose/*_world*/_landmarks_packet.IsEmpty()) {
+    return absl::CancelledError("Pose world landmarks packet is empty.");
   }
 
   if (!pose_detected)
@@ -156,20 +167,20 @@ absl::Status MPPoseTrackingDetector::DetectLandmarksWithStatus(
     return absl::OkStatus();
   }
 
-  auto &pose_landmarks =
-      pose_landmarks_packet
-          .Get<::mediapipe::NormalizedLandmarkList>();
+  auto &pose/*_world*/_landmarks =
+      pose/*_world*/_landmarks_packet
+          .Get<::mediapipe::NormalizedLandmarkList/*LandmarkList*/>();
 
   // Convert landmarks to cv::Point3f**.
-  const auto &normalizedLandmarkList = pose_landmarks;
-  const auto landmarks_num = normalizedLandmarkList.landmark_size();
+  const auto &/*world*/normalizedLandmarkList = pose/*_world*/_landmarks;
+  const auto landmarks_num = /*world*/normalizedLandmarkList.landmark_size();
 
   if (landmarks_num != kLandmarksNum) {
-    return absl::CancelledError("Detected unexpected landmarks number.");
+    return absl::CancelledError("Detected unexpected world landmarks number.");
   }
 
   for (int j = 0; j < landmarks_num; ++j) {
-    const auto &landmark = normalizedLandmarkList.landmark(j);
+    const auto &landmark = /*world*/normalizedLandmarkList.landmark(j);
     poses_landmarks[j].PointCoordinates.x = landmark.x();
     poses_landmarks[j].PointCoordinates.y = landmark.y();
     poses_landmarks[j].PointCoordinates.z = landmark.z();
@@ -241,6 +252,9 @@ input_stream: "input_video"
 
 # Pose landmarks. (NormalizedLandmarkList)
 output_stream: "pose_landmarks"
+
+/*# Pose world landmarks.(in meters) (LandmarkList)
+output_stream: "pose_world_landmarks"*/
 
 # Pose landmarks. (bool)
 output_stream: "pose_detected"
@@ -316,6 +330,7 @@ node {
   input_side_packet: "MODEL:1:pose_detection_model"
   input_stream: "IMAGE:throttled_input_video"
   output_stream: "LANDMARKS:pose_landmarks"
+/*  output_stream: "WORLD_LANDMARKS:pose_world_landmarks"*/
 }
 
 # The image stream is only used to 

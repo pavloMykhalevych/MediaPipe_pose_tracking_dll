@@ -60,6 +60,7 @@ private:
 
   static constexpr auto kInputStream = "input_video";
   static constexpr auto kOutputStream_landmarks = "pose_landmarks";
+  //static constexpr auto kOutputStream_world_landmarks = "pose_world_landmarks";
   static constexpr auto kOutputStream_pose_detected = "pose_detected";
 
   static const std::string graphConfig;
@@ -67,9 +68,11 @@ private:
   mediapipe::CalculatorGraph graph;
 
   std::unique_ptr<mediapipe::OutputStreamPoller> landmarks_poller_ptr;
+  //std::unique_ptr<mediapipe::OutputStreamPoller> world_landmarks_poller_ptr;
   std::unique_ptr<mediapipe::OutputStreamPoller> pose_detected_poller_ptr;
 
   mediapipe::Packet pose_landmarks_packet;
+  //mediapipe::Packet pose_world_landmarks_packet;
 
   bool pose_detected;
 };
