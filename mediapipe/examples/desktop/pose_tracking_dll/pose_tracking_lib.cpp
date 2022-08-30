@@ -67,7 +67,7 @@ MPPoseTrackingDetector::InitPoseTrackingDetector(const char *pose_landmark_model
 }
 
 absl::Status
-MPPoseTrackingDetector::DetectPosesWithStatus(const cv::Mat &camera_frame, bool *isPose,  const std::chrono::milliseconds& timestamp){
+MPPoseTrackingDetector::DetectPosesWithStatus(const cv::Mat &camera_frame, bool *isPose,  const std::chrono::microseconds& timestamp){
 
   if (!isPose) {
     return absl::InvalidArgumentError(
@@ -85,13 +85,10 @@ MPPoseTrackingDetector::DetectPosesWithStatus(const cv::Mat &camera_frame, bool 
   cv::Mat input_frame_mat = mediapipe::formats::MatView(input_frame.get());
   camera_frame.copyTo(input_frame_mat);
 
-  // Cast to microseconds because MadiaPipe timestamps are in units of microseconds.
-  const auto time = std::chrono::duration_cast<std::chrono::microseconds>(timestamp).count();
-
   // Send image packet into the graph.
   MP_RETURN_IF_ERROR(graph.AddPacketToInputStream(
       kInputStream, mediapipe::Adopt(input_frame.release())
-                        .At(mediapipe::Timestamp(time))));
+                        .At(mediapipe::Timestamp(timestamp.count()))));
 
   mediapipe::Packet pose_detected_packet;
   if (!pose_detected_poller_ptr ||
@@ -191,7 +188,7 @@ absl::Status MPPoseTrackingDetector::DetectLandmarksWithStatus(
   return absl::OkStatus();
 }
 
-void MPPoseTrackingDetector::DetectPoses(const cv::Mat &camera_frame, bool *isPose, const std::chrono::milliseconds& timestamp) {
+void MPPoseTrackingDetector::DetectPoses(const cv::Mat &camera_frame, bool *isPose, const std::chrono::microseconds& timestamp) {
   const auto status =
       DetectPosesWithStatus(camera_frame, isPose, timestamp);
   if (!status.ok()) {
@@ -226,7 +223,7 @@ DLLEXPORT void MPPoseTrackingDetectorDestruct(MPPoseTrackingDetector *detector) 
 }
 
 DLLEXPORT void MPPoseTrackingDetectorDetectPoses(
-    MPPoseTrackingDetector *detector, const cv::Mat &camera_frame, bool *isPose, const std::chrono::milliseconds& timestamp) {
+    MPPoseTrackingDetector *detector, const cv::Mat &camera_frame, bool *isPose, const std::chrono::microseconds& timestamp) {
   detector->DetectPoses(camera_frame, isPose, timestamp);
 }
 
