@@ -43,7 +43,7 @@ class MPPoseTrackingDetector {
 public:
   MPPoseTrackingDetector(const char *pose_landmark_model_path, const char *pose_detection_model_path);
 
-  void DetectPoses(const cv::Mat &camera_frame, bool *isPose);
+  void DetectPoses(const cv::Mat &camera_frame, bool *isPose, const std::chrono::milliseconds& timestamp);
 
   void DetectLandmarks(Point2DWithVisibility *pose_landmarks);
   void DetectLandmarks(Point3DWithVisibility *pose_landmarks);
@@ -53,7 +53,7 @@ public:
 private:
   absl::Status InitPoseTrackingDetector(const char *pose_landmark_model_path, const char *pose_detection_model_path);
 
-  absl::Status DetectPosesWithStatus(const cv::Mat &camera_frame, bool *isPose);
+  absl::Status DetectPosesWithStatus(const cv::Mat &camera_frame, bool *isPose, const std::chrono::milliseconds& timestamp);
 
   absl::Status DetectLandmarksWithStatus(Point2DWithVisibility *pose_landmarks);
   absl::Status DetectLandmarksWithStatus(Point3DWithVisibility *pose_landmarks);
@@ -87,7 +87,7 @@ MPPoseTrackingDetectorConstruct(const char *pose_landmark_model_path, const char
 DLLEXPORT void MPPoseTrackingDetectorDestruct(MPPoseTrackingDetector *detector);
 
 DLLEXPORT void MPPoseTrackingDetectorDetectPoses(
-    MPPoseTrackingDetector *detector, const cv::Mat &camera_frame, bool *isPose);
+    MPPoseTrackingDetector *detector, const cv::Mat &camera_frame, bool *isPose, const std::chrono::milliseconds& timestamp);
 
 DLLEXPORT void
 MPPoseTrackingDetectorDetect2DLandmarks(MPPoseTrackingDetector *detector,

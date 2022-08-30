@@ -51,8 +51,10 @@ int main(int argc, char **argv) {
     cv::cvtColor(camera_frame_raw, camera_frame, cv::COLOR_BGR2RGB);
 
     bool isPose = false;
+    const auto timestamp = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch());
+    LOG(INFO) << "Timestamp: " << timestamp.count();
 
-    MPPoseTrackingDetectorDetectPoses(poseDetector, camera_frame, &isPose);
+    MPPoseTrackingDetectorDetectPoses(poseDetector, camera_frame, &isPose, timestamp);
 
     if (isPose){
       MPPoseTrackingDetectorDetect3DLandmarks(poseDetector, poseLandmarks);
