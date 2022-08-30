@@ -67,7 +67,7 @@ MPPoseTrackingDetector::InitPoseTrackingDetector(const char *pose_landmark_model
 }
 
 absl::Status
-MPPoseTrackingDetector::DetectPosesWithStatus(const cv::Mat &camera_frame, bool *isPose){
+MPPoseTrackingDetector::DetectPosesWithStatus(const cv::Mat &camera_frame, bool *isPose,  const std::chrono::microseconds& timestamp){
 
   if (!isPose) {
     return absl::InvalidArgumentError(
@@ -86,11 +86,9 @@ MPPoseTrackingDetector::DetectPosesWithStatus(const cv::Mat &camera_frame, bool 
   camera_frame.copyTo(input_frame_mat);
 
   // Send image packet into the graph.
-  size_t frame_timestamp_us = static_cast<double>(cv::getTickCount()) /
-                              static_cast<double>(cv::getTickFrequency()) * 1e6;
   MP_RETURN_IF_ERROR(graph.AddPacketToInputStream(
       kInputStream, mediapipe::Adopt(input_frame.release())
-                        .At(mediapipe::Timestamp(frame_timestamp_us))));
+                        .At(mediapipe::Timestamp(timestamp.count()))));
 
   mediapipe::Packet pose_detected_packet;
   if (!pose_detected_poller_ptr ||
@@ -158,7 +156,7 @@ absl::Status MPPoseTrackingDetector::DetectLandmarksWithStatus(
 absl::Status MPPoseTrackingDetector::DetectLandmarksWithStatus(
     Point3DWithVisibility *poses_landmarks) {
 
-  if (pose/*_world*/_landmarks_packet.IsEmpty()) {
+  if (pose_landmarks_packet.IsEmpty()) {
     return absl::CancelledError("Pose world landmarks packet is empty.");
   }
 
@@ -167,20 +165,20 @@ absl::Status MPPoseTrackingDetector::DetectLandmarksWithStatus(
     return absl::OkStatus();
   }
 
-  auto &pose/*_world*/_landmarks =
-      pose/*_world*/_landmarks_packet
-          .Get<::mediapipe::NormalizedLandmarkList/*LandmarkList*/>();
+  auto &pose_landmarks =
+      pose_landmarks_packet
+          .Get<::mediapipe::NormalizedLandmarkList>();
 
   // Convert landmarks to cv::Point3f**.
-  const auto &/*world*/normalizedLandmarkList = pose/*_world*/_landmarks;
-  const auto landmarks_num = /*world*/normalizedLandmarkList.landmark_size();
+  const auto &normalizedLandmarkList = pose_landmarks;
+  const auto landmarks_num = normalizedLandmarkList.landmark_size();
 
   if (landmarks_num != kLandmarksNum) {
     return absl::CancelledError("Detected unexpected world landmarks number.");
   }
 
   for (int j = 0; j < landmarks_num; ++j) {
-    const auto &landmark = /*world*/normalizedLandmarkList.landmark(j);
+    const auto &landmark = normalizedLandmarkList.landmark(j);
     poses_landmarks[j].PointCoordinates.x = landmark.x();
     poses_landmarks[j].PointCoordinates.y = landmark.y();
     poses_landmarks[j].PointCoordinates.z = landmark.z();
@@ -190,9 +188,9 @@ absl::Status MPPoseTrackingDetector::DetectLandmarksWithStatus(
   return absl::OkStatus();
 }
 
-void MPPoseTrackingDetector::DetectPoses(const cv::Mat &camera_frame, bool *isPose) {
+void MPPoseTrackingDetector::DetectPoses(const cv::Mat &camera_frame, bool *isPose, const std::chrono::microseconds& timestamp) {
   const auto status =
-      DetectPosesWithStatus(camera_frame, isPose);
+      DetectPosesWithStatus(camera_frame, isPose, timestamp);
   if (!status.ok()) {
     LOG(INFO) << "MPPoseTrackingDetector::DetectPoses failed: " << status.message();
   }
@@ -225,8 +223,8 @@ DLLEXPORT void MPPoseTrackingDetectorDestruct(MPPoseTrackingDetector *detector) 
 }
 
 DLLEXPORT void MPPoseTrackingDetectorDetectPoses(
-    MPPoseTrackingDetector *detector, const cv::Mat &camera_frame, bool *isPose) {
-  detector->DetectPoses(camera_frame, isPose);
+    MPPoseTrackingDetector *detector, const cv::Mat &camera_frame, bool *isPose, const std::chrono::microseconds& timestamp) {
+  detector->DetectPoses(camera_frame, isPose, timestamp);
 }
 
 DLLEXPORT void
@@ -252,9 +250,6 @@ input_stream: "input_video"
 
 # Pose landmarks. (NormalizedLandmarkList)
 output_stream: "pose_landmarks"
-
-/*# Pose world landmarks.(in meters) (LandmarkList)
-output_stream: "pose_world_landmarks"*/
 
 # Pose landmarks. (bool)
 output_stream: "pose_detected"
@@ -330,7 +325,6 @@ node {
   input_side_packet: "MODEL:1:pose_detection_model"
   input_stream: "IMAGE:throttled_input_video"
   output_stream: "LANDMARKS:pose_landmarks"
-/*  output_stream: "WORLD_LANDMARKS:pose_world_landmarks"*/
 }
 
 # The image stream is only used to 

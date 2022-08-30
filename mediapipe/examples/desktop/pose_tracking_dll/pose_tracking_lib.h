@@ -43,7 +43,7 @@ class MPPoseTrackingDetector {
 public:
   MPPoseTrackingDetector(const char *pose_landmark_model_path, const char *pose_detection_model_path);
 
-  void DetectPoses(const cv::Mat &camera_frame, bool *isPose);
+  void DetectPoses(const cv::Mat &camera_frame, bool *isPose, const std::chrono::microseconds& timestamp);
 
   void DetectLandmarks(Point2DWithVisibility *pose_landmarks);
   void DetectLandmarks(Point3DWithVisibility *pose_landmarks);
@@ -53,14 +53,13 @@ public:
 private:
   absl::Status InitPoseTrackingDetector(const char *pose_landmark_model_path, const char *pose_detection_model_path);
 
-  absl::Status DetectPosesWithStatus(const cv::Mat &camera_frame, bool *isPose);
+  absl::Status DetectPosesWithStatus(const cv::Mat &camera_frame, bool *isPose, const std::chrono::microseconds& timestamp);
 
   absl::Status DetectLandmarksWithStatus(Point2DWithVisibility *pose_landmarks);
   absl::Status DetectLandmarksWithStatus(Point3DWithVisibility *pose_landmarks);
 
   static constexpr auto kInputStream = "input_video";
   static constexpr auto kOutputStream_landmarks = "pose_landmarks";
-  //static constexpr auto kOutputStream_world_landmarks = "pose_world_landmarks";
   static constexpr auto kOutputStream_pose_detected = "pose_detected";
 
   static const std::string graphConfig;
@@ -68,11 +67,9 @@ private:
   mediapipe::CalculatorGraph graph;
 
   std::unique_ptr<mediapipe::OutputStreamPoller> landmarks_poller_ptr;
-  //std::unique_ptr<mediapipe::OutputStreamPoller> world_landmarks_poller_ptr;
   std::unique_ptr<mediapipe::OutputStreamPoller> pose_detected_poller_ptr;
 
   mediapipe::Packet pose_landmarks_packet;
-  //mediapipe::Packet pose_world_landmarks_packet;
 
   bool pose_detected;
 };
@@ -87,7 +84,7 @@ MPPoseTrackingDetectorConstruct(const char *pose_landmark_model_path, const char
 DLLEXPORT void MPPoseTrackingDetectorDestruct(MPPoseTrackingDetector *detector);
 
 DLLEXPORT void MPPoseTrackingDetectorDetectPoses(
-    MPPoseTrackingDetector *detector, const cv::Mat &camera_frame, bool *isPose);
+    MPPoseTrackingDetector *detector, const cv::Mat &camera_frame, bool *isPose, const std::chrono::microseconds& timestamp);
 
 DLLEXPORT void
 MPPoseTrackingDetectorDetect2DLandmarks(MPPoseTrackingDetector *detector,
